@@ -1,0 +1,41 @@
+{
+  "name": "openpds",
+  "version": "0.2.0",
+  "type": "module",
+  "author": {
+    "name": "Jesse Lawson",
+    "email": "jesse@teamlanes.com",
+    "url": "https://bsky.app/profile/jesse.lawsonry.com"
+  },
+  "homepage": "https://openpds.org",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@atproto/api": "^0.13.31",
+    "@vueuse/core": "^12.5.0",
+    "dompurify": "^3.2.3",
+    "idb": "^8.0.1",
+    "marked": "^15.0.6",
+    "pinia": "^2.3.1",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/dompurify": "^3.2.0",
+    "@types/marked": "^6.0.0",
+    "@types/node": "^22.10.10",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/tsconfig": "^0.7.0",
+    "gh-pages": "^6.3.0",
+    "sass-embedded": "^1.83.4",
+    "scss": "^0.2.4",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.5",
+    "vite-plugin-vue-devtools": "^7.7.1",
+    "vitest": "^3.0.4",
+    "vue-tsc": "^2.2.0"
+  }
+}
