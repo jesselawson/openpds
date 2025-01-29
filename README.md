@@ -27,6 +27,10 @@ of data relevant to the AT Protocol.
 
 ### OpenPDS Articles Editor (`openpds.org/articles`)
 
+* **Goal**: Create a public repository of markdown files that I can 
+  use as a source of truth for a programmatically generated 
+  static site blog (Hugo, Eleventy, etc).
+
 ## Backlog
 
 **New artifact editors:**

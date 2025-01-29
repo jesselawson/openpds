@@ -45,6 +45,7 @@ const publish = async () => {
     await sync.publishArticle(editor.article)
     editor.saved = true
   } catch (err) {
+    editor.article.published = false 
     console.error('Failed to publish:', err)
   }
 }
@@ -58,12 +59,15 @@ onMounted(async () => {
     if (editor?.article) {
       title.value = editor.article.title
       content.value = editor.article.content
+    } else {
+      throw new Error(`Tried to load article '${route.params.id}', but loadArticle ended up being empty`)
     }
   } else {
     const db = new ArticleDB()
     await db.create({
       id: nanoid(),
       title: '',
+      syncStatus: "LOCAL",
       content: '',
       published: false,
       mediaRefs: [],
@@ -77,10 +81,10 @@ onMounted(async () => {
   <table>
     <tbody>
       <tr>
-        <th>
+        <th colspan="1">
         TITLE
         </th>
-        <td colspan="2">
+        <td colspan="1">
           <input
         v-model="title"
         type="text"
@@ -91,22 +95,21 @@ onMounted(async () => {
       </tr>
 
       <tr>
-        <td colspan="4">
+        <td colspan="2">
           <main>
           <MarkdownEditor
             v-model="content"
             placeholder="Start writing..."
             class="width-auto"
-            style="min-height:25rem"
           />
           </main>
         </td>
       </tr>
 
       <tr>
-        <th>LOCAL</th>
-        <td v-if="!editor?.saved">SAVING...</td>
-        <td v-else>SAVED {{ new Intl.DateTimeFormat('en-US', {
+        <th colspan="1">LOCAL</th>
+        <td class="width-auto"  v-if="!editor?.saved">SAVING...</td>
+        <td class="width-auto"  v-if="editor?.saved && editor?.article">SAVED {{ new Intl.DateTimeFormat('en-US', {
   day: '2-digit',
   month: 'short',
   year: 'numeric',
@@ -115,11 +118,11 @@ onMounted(async () => {
   timeZone: 'America/Los_Angeles',
   timeZoneName: 'short'
 }).format(editor?.article.lastModified) }}</td>
-        <td v-if="editor?.article?.title === 'Untitled'">(waiting for content)</td>
+        <td class="width-auto"  v-if="editor?.article?.title === 'Untitled'">(waiting for content)</td>
       </tr>
       <tr>
         <th>PDS</th>
-        <td>
+        <td class="width-auto">
           <span v-if="editor?.article?.published">PUBLISHED {{ new Intl.DateTimeFormat('en-US', {
   day: '2-digit',
   month: 'short',
@@ -129,38 +132,25 @@ onMounted(async () => {
   timeZone: 'America/Los_Angeles',
   timeZoneName: 'short'
 }).format(editor?.article.publishedAt) }} (Revision {{ editor?.article.revision }})</span>
-          <span v-else-if="sync.syncing">PUBLISHING...</span>
+          <span v-else-if="sync.syncing">PUBLISHING NOW...</span>
           <span v-else>NOT PUBLISHED (<a href="#" @click="publish">publish now</a>)</span>
         </td>
       </tr>
-
-
-    </tbody>
-  </table>
-
-  <div class="h-screen flex flex-col">
-    <header class="border-b p-4 flex justify-between items-center">
-      
-      <div class="flex items-center gap-2">
-        <span v-if="sync.syncing" class="text-sm text-gray-500">
-          Publishing...
-        </span>
-        <span v-else-if="editor?.saved === false" class="text-sm text-gray-500">
-          Saving...
-        </span>
-        <span v-if="sync.error" class="text-sm text-red-500">
-          {{ sync.error.message }}
-        </span>
-        <button 
+      <tr v-if="sync.error">
+          <th>ERROR</th>
+          <td>{{ sync.error.message }}</td>
+        </tr>
+      <tr>
+        <td colspan="2">
+          <button 
           @click="publish"
           class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           :disabled="!editor?.saved || sync.syncing"
         >
           Publish
         </button>
-      </div>
-    </header>
-
-    
-  </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 </template>

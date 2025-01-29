@@ -1,4 +1,28 @@
-@import url('https://fonts.cdnfonts.com/css/jetbrains-mono-2');
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  src: local('JetBrains Mono'), url('https://fonts.cdnfonts.com/s/98875/JetBrainsMonoRegular.woff') format('woff');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: italic;
+  font-weight: 400;
+  src: local('JetBrains Mono'), url('https://fonts.cdnfonts.com/s/98875/JetBrainsMonoItalic.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 800;
+  src: local('JetBrains Mono'), url('https://fonts.cdnfonts.com/s/98875/JetBrainsMonoExtraBold.woff') format('woff');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: italic;
+  font-weight: 800;
+  src: local('JetBrains Mono'), url('https://fonts.cdnfonts.com/s/98875/JetBrainsMonoExtraBoldItalic.woff') format('woff');
+}
 
 // Variables
 $font-family: "JetBrains Mono", monospace;
@@ -124,12 +148,30 @@ body {
   }
 }
 
-.openpds {
+
+@mixin rainbowtext {
   font-weight: bolder;
-  background: linear-gradient(to right, #ef5350, #f48fb1, #7e57c2, #2196f3, #26c6da, #43a047, #eeff41, #f9a825, #ff5722);
+  background: linear-gradient(to right, #e78284, #ef9f76, #e5c890, #a6d189, #85c1dc, #ca9ee6);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+.meta {
+  display: block;
+  font-size: 66%;
+}
+
+.apptitle {
+  font-weight: 800;
+  color: var(--th-color);
+  
+  @include rainbowtext;
+}
+
+
+.openpds {
+  @include rainbowtext;
 }
 
 .title {

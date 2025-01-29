@@ -26,10 +26,12 @@ export class PDSClient {
   }
 
   setAuth(jwt: string) {
-    this.agent.api.setHeader('Authorization', `Bearer ${jwt}`)
+    this.agent.setHeader('Authorization', `Bearer ${jwt}`)
   }
 
   
+  // Tries to retrieve an article from the PDS so that the local version 
+  // becomes up to date:
   async syncArticle(article: Article): Promise<SyncResult> {
     if (!article.published) {
       throw new Error('Cannot sync unpublished article')
@@ -41,18 +43,24 @@ export class PDSClient {
         repo: article.authorDid,
         rkey: article.id
       })
-  
-      if (!remote.success) {
-        return this.createArticle(article)
+
+      const remoteArticle = remote.data.value as ArticleRecord
+      
+      if (remoteArticle.text !== article.content || remoteArticle.title !== article.title) {
+        return {
+          status: 'CONFLICT',
+          remoteRevision: article.revision + 1
+        }
       }
-  
-      // Article exists - update it
+      
       return this.updateArticle(article)
       
-    } catch (err) {
-      if (err.statusCode === 400) {
+    } catch (err: any) {
+      // If not found (PDS returns 400, not 404), create the article in PDS
+      if (err.statusCode === 400 || err.error == "RecordNotFound") {
         return this.createArticle(article)
       }
+      
       return { status: 'ERROR', error: err as Error }
     }
   }

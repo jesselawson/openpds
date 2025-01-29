@@ -1,5 +1,3 @@
-import { createPinia } from 'pinia'
-const pinia = createPinia()
 import { defineStore } from 'pinia'
 import { PDSClient } from '@/lib/pds'
 import { useAuthStore } from './auth'
@@ -9,15 +7,63 @@ import type { Article } from '@/types'
 interface SyncState {
   syncing: boolean
   error: Error | null
+  pendingArticles: number
+  progress: number
 }
 
 export const useSyncStore = defineStore('sync', {
   state: (): SyncState => ({
     syncing: false,
-    error: null
+    error: null,
+    pendingArticles: 0,
+    progress: 0
   }),
 
   actions: {
+    async checkSync(pdsClient: PDSClient) {
+      this.syncing = true
+      try {
+        const remoteArticles = await pdsClient.listArticles()
+        const db = new ArticleDB()
+        const localArticles = await db.list()
+        
+        const diff = remoteArticles.filter(remote => 
+          !localArticles.find(local => local.id === remote.id)
+        )
+        
+        this.pendingArticles = diff.length
+        return diff
+      } catch (err) {
+        this.error = err as Error
+        throw err
+      } finally {
+        this.syncing = false
+      }
+    },
+
+    async syncArticles(articles: Article[], pdsClient: PDSClient) {
+      this.syncing = true
+      this.progress = 0
+      const total = articles.length
+      
+      try {
+        const db = new ArticleDB()
+        for (const [index, article] of articles.entries()) {
+          await db.create({
+            ...article,
+            syncStatus: 'SYNCED'
+          })
+          this.progress = Math.round(((index + 1) / total) * 100)
+        }
+        this.pendingArticles = 0
+      } catch (err) {
+        this.error = err as Error
+        throw err
+      } finally {
+        this.syncing = false
+      }
+    },
+
     async publishArticle(article: Article) {
       if (!article.published) {
         const db = new ArticleDB()

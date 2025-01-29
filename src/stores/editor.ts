@@ -10,7 +10,9 @@ export const useEditorStore = defineStore('editor', {
     article: null,
     saved: true,
     savingStatus: 'IDLE',
-    lastError: undefined
+    lastError: undefined,
+    content: "",
+    mode: 'edit'
   }),
 
   actions: {
@@ -73,21 +75,16 @@ export const useEditorStore = defineStore('editor', {
       this.savingStatus = 'SAVING'
       try {
         const db = new ArticleDB()
-        const now = new Date()
+        
         // Update article state first
         await db.update(this.article.id, {
-          published: true,
-          publishedAt: now,
           syncStatus: 'SYNCING'
         })
-        
-        // Update local store state
-        this.article.published = true
-        this.article.publishedAt = now
-        this.article.syncStatus = 'SYNCING'
 
         const pds = new PDSClient()
+
         pds.setAuth(auth.session.accessJwt)
+        
         const result = await pds.syncArticle(this.article)
 
         if (result.status === 'ERROR') throw result.error

@@ -100,20 +100,20 @@ const createArticle = () => router.push({ name: 'editor' })
           <a class="font-semibold" href="#" @click="router.push(`/editor/${article.id}`)">
             {{ article.title || 'Untitled' }}
           </a>
+          <span class="meta">{{  article.id }}</span>
         </td>
         <td>
           <span>{{ new Date(article.lastModified).toLocaleDateString() }}</span>
         </td>
         <td>
           <span>{{ article.syncStatus }}</span>
-          <span v-if="article.publishedAt">
+          <span v-if="article.publishedAt && article.published">
             · Published {{ new Date(article.publishedAt).toLocaleDateString() }}
           </span>
         </td>
         <td>
           <button
             @click="deleteArticle(article.id)"
-            class="text-red-500 hover:text-red-600"
           >
             Delete
           </button>

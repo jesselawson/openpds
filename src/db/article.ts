@@ -17,7 +17,7 @@ export class ArticleDB {
    * Creates a new article in IndexedDB
    * Validates required fields and sets defaults
    */
-  async create(article: Omit<Article, 'revision' | 'syncStatus' | 'lastModified'>): Promise<void> {
+  async create(article: Omit<Article, 'revision' | 'lastModified'>): Promise<void> {
     const db = await getDB()
     const tx = db.transaction('articles', 'readwrite')
     await tx.store.add({

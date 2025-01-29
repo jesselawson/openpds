@@ -43,8 +43,7 @@ const handleSkip = () => {
     <tbody>
       <tr>
         <td colspan="2">
-          <h1 class="title">OpenPDS Articles Editor</h1>
-          <p>ALPHA PROTOTYPE</p>
+          <p><span class="openpds">OpenPDS Articles Editor</span> (Alpha Prototype / Jan 2025)</p>
         </td>
       </tr>
     <tr>

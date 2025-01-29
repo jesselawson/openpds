@@ -56,7 +56,7 @@ export class AuthManager {
     if (!currentSession) throw new Error('No active session')
 
     try {
-      const { data } = await this.agent.api.com.atproto.server.refreshSession()
+      const { data } = await this.agent.com.atproto.server.refreshSession()
       const session = await this.saveSession(data)
       return session
     } catch (err) {
