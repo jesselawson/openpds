@@ -3,6 +3,7 @@ import { PDSClient } from '@/lib/pds'
 import { useAuthStore } from './auth'
 import { ArticleDB } from '@/db/article'
 import type { Article } from '@/types'
+import { useEditorStore } from './editor'
 
 interface SyncState {
   syncing: boolean
@@ -22,8 +23,10 @@ export const useSyncStore = defineStore('sync', {
   actions: {
     async checkSync(pdsClient: PDSClient) {
       this.syncing = true
+      const auth = useAuthStore()
+      
       try {
-        const remoteArticles = await pdsClient.listArticles()
+        const remoteArticles = await pdsClient.listArticles(auth.session.did)
         const db = new ArticleDB()
         const localArticles = await db.list()
         
@@ -68,8 +71,6 @@ export const useSyncStore = defineStore('sync', {
       if (!article.published) {
         const db = new ArticleDB()
         await db.update(article.id, {
-          published: true,
-          publishedAt: new Date(),
           syncStatus: 'SYNCING'
         })
       }
@@ -83,34 +84,35 @@ export const useSyncStore = defineStore('sync', {
       const auth = useAuthStore()
       
       try {
-        if (!auth.session?.accessJwt) {
-          throw new Error('Not authenticated')
-        }
-
+        if (!auth.session?.accessJwt) throw new Error('Not authenticated')
         const db = new ArticleDB()
         const article = await db.get(articleId)
-        if (!article) {
-          throw new Error('Article not found')
-        }
-
+        if (!article) throw new Error('Article not found')
+    
         const pds = new PDSClient()
         pds.setAuth(auth.session.accessJwt)
         
-        const result = await pds.syncArticle(article)
-        
-        if (result.status === 'CONFLICT') {
-          await db.update(articleId, {
-            syncStatus: 'ERROR',
-            revision: result.remoteRevision
-          })
-          throw new Error('Sync conflict detected')
-        }
-
+        // Pass conflict handler
+        const result = await pds.syncArticle(article, {
+          onConflict: async (local, remote) => {
+            // Pass to editor store for UI handling
+            const editor = useEditorStore() 
+            return new Promise<boolean>((resolve) => {
+              editor.showConflict = true
+              editor.conflictData = {
+                local: { title: local.title, content: local.content },
+                remote: { title: remote.title, text: remote.text }
+              }
+              editor.resolveConflict = resolve
+            })
+          }
+        })
+    
         if (result.status === 'ERROR') {
           await db.update(articleId, { syncStatus: 'ERROR' })
           throw result.error
         }
-
+    
       } catch (err) {
         this.error = err as Error
         throw err

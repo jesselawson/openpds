@@ -1,20 +1,34 @@
 <script setup lang="ts">
-import { ref, onMounted, watchEffect } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted, watchEffect, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useEditorStore } from '@/stores/editor'
 import { useSyncStore } from '@/stores/sync'
 import { ArticleDB } from '@/db/article'
 import { useAuthStore } from '@/stores/auth'
 import { nanoid } from 'nanoid'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
+import ConflictModal from '@/components/ConflictModal.vue'
 
 const route = useRoute()
+const router = useRouter()
 const editor = useEditorStore()
 const sync = useSyncStore()
 const auth = useAuthStore()
 const title = ref('')
 const content = ref('')
 let saveTimeout: number | undefined
+
+const deleteArticle = async () => {
+  if (!editor.article) return
+  if (!confirm('Delete this article?')) return
+  
+  try {
+    await editor.deleteArticle(editor.article.id)
+    router.push({ name: 'home' })
+  } catch (err) {
+    console.error('Failed to delete:', err)
+  }
+}
 
 const debouncedSave = () => {
   if (!editor.article) return
@@ -30,22 +44,32 @@ const debouncedSave = () => {
   }, 1000)
 }
 
-watchEffect(() => {
-  if (!title.value || !content.value) return
+// Watch store article changes
+watch(() => editor.article, (newArticle) => {
+  if (newArticle) {
+    title.value = newArticle.title
+    content.value = newArticle.content
+  }
+}, { deep: true })
+
+// Watch local input changes
+watch([title, content], () => {
   if (!editor?.article) return
-  
   editor.saved = false
   debouncedSave()
-})
+}, { immediate: false })
 
 const publish = async () => {
   if (!editor.article) return
-  
   try {
     await sync.publishArticle(editor.article)
+    // Reload article to get updated state
+    await editor.loadArticle(editor.article.id)
     editor.saved = true
   } catch (err) {
-    editor.article.published = false 
+    if (!editor.article.postUri) {
+      editor.article.published = false 
+    }
     console.error('Failed to publish:', err)
   }
 }
@@ -94,6 +118,11 @@ onMounted(async () => {
         </td>
       </tr>
 
+      <tr v-if="editor.lastOperationStatus">
+        <th colspan="1">LAST OP</th>
+        <td>{{ editor.lastOperationStatus }}</td>
+      </tr>
+
       <tr>
         <td colspan="2">
           <main>
@@ -109,29 +138,30 @@ onMounted(async () => {
       <tr>
         <th colspan="1">LOCAL</th>
         <td class="width-auto"  v-if="!editor?.saved">SAVING...</td>
-        <td class="width-auto"  v-if="editor?.saved && editor?.article">SAVED {{ new Intl.DateTimeFormat('en-US', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'America/Los_Angeles',
-  timeZoneName: 'short'
-}).format(editor?.article.lastModified) }}</td>
+        <td class="width-auto"  v-if="editor?.saved && editor?.article">SAVED &nbsp;&nbsp;&nbsp;&nbsp;{{ new Intl.DateTimeFormat('en-US', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'America/Los_Angeles',
+            timeZoneName: 'short'
+          }).format(editor?.article.lastModified) }}
+        </td>
         <td class="width-auto"  v-if="editor?.article?.title === 'Untitled'">(waiting for content)</td>
       </tr>
       <tr>
         <th>PDS</th>
         <td class="width-auto">
           <span v-if="editor?.article?.published">PUBLISHED {{ new Intl.DateTimeFormat('en-US', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'America/Los_Angeles',
-  timeZoneName: 'short'
-}).format(editor?.article.publishedAt) }} (Revision {{ editor?.article.revision }})</span>
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              timeZone: 'America/Los_Angeles',
+              timeZoneName: 'short'
+            }).format(editor?.article.publishedAt) }}</span>
           <span v-else-if="sync.syncing">PUBLISHING NOW...</span>
           <span v-else>NOT PUBLISHED (<a href="#" @click="publish">publish now</a>)</span>
         </td>
@@ -144,13 +174,25 @@ onMounted(async () => {
         <td colspan="2">
           <button 
           @click="publish"
-          class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           :disabled="!editor?.saved || sync.syncing"
         >
-          Publish
+          {{ sync.syncing ? 'Sync in progress...' : 'Publish (Sync with PDS)' }}
+        </button>
+
+        <button 
+          @click="deleteArticle"
+          style="float:right; background-color:black"
+        >
+          Delete
         </button>
         </td>
       </tr>
     </tbody>
+    <ConflictModal v-if="editor.conflictData.local && editor.conflictData.remote"
+  v-model="editor.showConflict"
+  :local="editor.conflictData.local"
+  :remote="editor.conflictData.remote"
+  @resolve="editor.resolveConflictChoice"
+/>
   </table>
 </template>

@@ -44,7 +44,14 @@ export interface Article {
     article: Article | null
     saved: boolean
     savingStatus: 'IDLE' | 'SAVING' | 'ERROR'
-    lastError?: Error
+    lastError?: Error,
+    showConflict: boolean,
+    conflictData: {
+      local: Pick<Article, 'title' | 'content'> | null
+      remote: { title: string; text: string } | null
+    },
+    resolveConflict?: (useRemote: boolean) => void,
+    lastOperationStatus: string
   }
   
   // Analytics event types

@@ -33,14 +33,6 @@ const loadArticles = async () => {
   articles.value = await db.list(listOpts.value)
 }
 
-const deleteArticle = async (id: string) => {
-  if (!confirm('Delete this article?')) return
-  
-  const db = new ArticleDB()
-  await db.delete(id)
-  await loadArticles()
-}
-
 onMounted(async () => {
   await loadArticles()
   loading.value = false
@@ -56,7 +48,7 @@ const createArticle = () => router.push({ name: 'editor' })
       <table>
       <thead>
       <tr>
-        <th class="width-auto">
+        <th colspan="1" class="width-auto">
           <a class="table-header-href" :class="{ 'sort-key': sortField === 'title' }" href="#"
             @click="toggleSort('title')"
           >
@@ -78,20 +70,18 @@ const createArticle = () => router.push({ name: 'editor' })
             Published At <span v-if="sortField === 'publishedAt'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
           </a>
         </th>
-        
-        <th class="width-min">TOOLS</th>
       </tr>
     </thead>
     <tbody v-if="loading" class="text-gray-500">
       <tr>
-        <td colspan="4">
+        <td colspan="3">
           Loading articles...
         </td>
       </tr>
     </tbody>
     <tbody v-else-if="articles.length === 0">
       <tr>
-        <td colspan="4">No articles yet. Create your first one!</td>
+        <td colspan="3">No articles yet. Create your first one!</td>
       </tr>
     </tbody>
     <tbody v-else>
@@ -100,23 +90,35 @@ const createArticle = () => router.push({ name: 'editor' })
           <a class="font-semibold" href="#" @click="router.push(`/editor/${article.id}`)">
             {{ article.title || 'Untitled' }}
           </a>
-          <span class="meta">{{  article.id }}</span>
+          <span class="meta">ID: {{  article.id }}</span>
+          <span class="meta">LOCAL: {{  article.syncStatus }}</span>
+          <span class="meta">PDS: {{ article.published ? 'PUBLISHED' : '(not published)' }}</span>
         </td>
         <td>
-          <span>{{ new Date(article.lastModified).toLocaleDateString() }}</span>
-        </td>
-        <td>
-          <span>{{ article.syncStatus }}</span>
-          <span v-if="article.publishedAt && article.published">
-            · Published {{ new Date(article.publishedAt).toLocaleDateString() }}
+          <span>{{ new Intl.DateTimeFormat('en-US', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  timeZone: 'America/Los_Angeles',
+                  timeZoneName: 'short'
+                }).format(article.lastModified) }}
           </span>
         </td>
         <td>
-          <button
-            @click="deleteArticle(article.id)"
-          >
-            Delete
-          </button>
+          <span></span>
+          <span v-if="article.publishedAt && article.published">
+            {{ new Intl.DateTimeFormat('en-US', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'America/Los_Angeles',
+                timeZoneName: 'short'
+              }).format(article.publishedAt) }}
+          </span>
         </td>
       </tr>
     </tbody>

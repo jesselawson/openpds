@@ -7,14 +7,21 @@ const ARTICLE_COLLECTION = 'org.openpds.article'
 export interface SyncResult {
   status: 'SUCCESS' | 'CONFLICT' | 'ERROR'
   error?: Error
-  remoteRevision?: number
+  remoteRevision?: number,
+  useLocalVersion?: boolean
 }
 
 interface ArticleRecord {
   title: string
   text: string
   media?: Blob[]
+
+  // This gets updated on EVERY sync:
   publishedAt?: Date
+}
+
+interface SyncOptions {
+  onConflict?: (local: Article, remote: ArticleRecord) => Promise<boolean>
 }
 
 export class PDSClient {
@@ -29,17 +36,43 @@ export class PDSClient {
     this.agent.setHeader('Authorization', `Bearer ${jwt}`)
   }
 
+  async listArticles(authorDid: string): Promise<Article[]> {
+    try {
+      const { data } = await this.agent.com.atproto.repo.listRecords({
+        collection: ARTICLE_COLLECTION,
+        repo: authorDid,  // Use passed authorDid instead
+        limit: 100 // Adjust based on needs
+      })
+  
+      return data.records.map(record => ({
+        id: record.rkey as string,
+        title: record.value.title,
+        content: record.value.text,
+        published: true, // PDS only has published articles
+        publishedAt: new Date(record.value.publishedAt),
+        revision: 1, // PDS doesn't track revisions
+        postUri: record.uri,
+        syncStatus: 'SYNCED',
+        mediaRefs: record.value.media || [],
+        lastModified: new Date(record.value.indexedAt),
+        authorDid: record.repo
+      }))
+    } catch (err) {
+      throw new Error(`Failed to list articles: ${err.message}`)
+    }
+  }
+
   
   // Tries to retrieve an article from the PDS so that the local version 
   // becomes up to date:
-  async syncArticle(article: Article): Promise<SyncResult> {
+  async syncArticle(article: Article, options?: SyncOptions): Promise<SyncResult> {
     if (!article.published) {
       throw new Error('Cannot sync unpublished article')
     }
     
     try {
       const remote = await this.agent.com.atproto.repo.getRecord({
-        collection: 'org.openpds.article',
+        collection: ARTICLE_COLLECTION,
         repo: article.authorDid,
         rkey: article.id
       })
@@ -47,26 +80,38 @@ export class PDSClient {
       const remoteArticle = remote.data.value as ArticleRecord
       
       if (remoteArticle.text !== article.content || remoteArticle.title !== article.title) {
-        return {
-          status: 'CONFLICT',
-          remoteRevision: article.revision + 1
+        if(!options?.onConflict) {
+          return { status: 'CONFLICT', remoteRevision: article.revision + 1 }
         }
+  
+        const useRemote = await options.onConflict(article, remoteArticle)
+
+        if(useRemote) {
+          await this.db.update(article.id, {
+            title: remoteArticle.title,
+            content: remoteArticle.text,
+            syncStatus: 'SYNCED'
+          })
+          return { status: 'SUCCESS', useLocalVersion: false }
+        }
+        
+        // Using local version - will be handled by updateArticle
+        return this.updateArticle(article, true)
       }
       
       return this.updateArticle(article)
       
     } catch (err: any) {
-      // If not found (PDS returns 400, not 404), create the article in PDS
       if (err.statusCode === 400 || err.error == "RecordNotFound") {
         return this.createArticle(article)
       }
-      
       return { status: 'ERROR', error: err as Error }
     }
   }
 
   private async createArticle(article: Article): Promise<SyncResult> {
     try {
+      const now = new Date();
       const result = await this.agent.com.atproto.repo.createRecord({
         collection: ARTICLE_COLLECTION,
         repo: article.authorDid,
@@ -74,24 +119,28 @@ export class PDSClient {
         record: {
           title: article.title,
           text: article.content,
-          publishedAt: article.publishedAt,
+          publishedAt: now,
           media: article.mediaRefs
         }
       })
 
       await this.db.update(article.id, {
         syncStatus: 'SYNCED',
-        postUri: result.data.uri
+        postUri: result.data.uri,
+        publishedAt: now,
       })
 
-      return { status: 'SUCCESS' }
+      return { status: 'SUCCESS', useLocalVersion: true }
     } catch (err) {
       return { status: 'ERROR', error: err as Error}
     }
   }
 
-  private async updateArticle(article: Article): Promise<SyncResult> {
+  private async updateArticle(article: Article, isConflictResolution = false): Promise<SyncResult> {
+    
     try {
+      const now = new Date();
+
       await this.agent.com.atproto.repo.putRecord({
         collection: ARTICLE_COLLECTION,
         repo: article.authorDid,
@@ -99,16 +148,20 @@ export class PDSClient {
         record: {
           title: article.title,
           text: article.content,
-          publishedAt: article.publishedAt,
+          publishedAt: now,
           media: article.mediaRefs
         }
       })
 
       await this.db.update(article.id, { 
-        syncStatus: 'SYNCED'
+        syncStatus: 'SYNCED',
+        publishedAt: now // Update local to match PDS
       })
 
-      return { status: 'SUCCESS' }
+      return { 
+        status: 'SUCCESS',
+        useLocalVersion: isConflictResolution 
+      }
     } catch (err) {
       return { status: 'ERROR', error: err as Error }
     }
