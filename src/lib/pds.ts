@@ -44,17 +44,19 @@ export class PDSClient {
         limit: 100 // Arbitrary
       })
 
+      console.log(data.records);
+
       return data.records.map(record => ({
         id: record.uri.split('/').pop(),
         title: record.value.title,
         content: record.value.text,
         published: true, // PDS only has published articles
-        publishedAt: record.value.indexedAt,
+        publishedAt: record.value.publishedAt,
         revision: 1, // PDS doesn't track revisions
         postUri: record.uri,
         syncStatus: 'SYNCED',
         mediaRefs: record.value.media || [],
-        lastModified: record.value.indexedAt,
+        lastModified: record.value.publishedAt,
         authorDid: authorDid
       }))
     } catch (err) {
@@ -110,6 +112,22 @@ export class PDSClient {
         return this.createArticle(article)
       }
       return { status: 'ERROR', error: err as Error }
+    }
+  }
+
+  async deleteArticle(article: Article): Promise<void> {
+    try {
+      await this.agent.com.atproto.repo.deleteRecord({
+        collection: ARTICLE_COLLECTION,
+        repo: article.authorDid,
+        rkey: article.id
+      })
+    } catch (err) {
+      if (err.error === 'RecordNotFound') {
+        // Already deleted from PDS, can proceed with local delete
+        return
+      }
+      throw err 
     }
   }
 

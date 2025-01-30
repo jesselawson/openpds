@@ -37,17 +37,20 @@ export const useEditorStore = defineStore('editor', {
         await db.update(rawArticle.id, updates)
         this.saved = true
         this.savingStatus = 'IDLE'
-        this.lastOperationStatus = 'Article saved to local DB'
+        this.lastOperationStatus = 'Article synced with Local DB'
       } catch (err) {
         this.savingStatus = 'ERROR'
         this.lastError = err as Error
-        this.lastOperationStatus = 'Failed to save article to local DB'
+        this.lastOperationStatus = 'Failed to sync article with Local DB'
         throw err
       }
     },
 
     async deleteArticle(id: string) {
       const db = new ArticleDB()
+      const sync = useSyncStore()
+      await sync.deleteArticle(id);
+      
       await db.delete(id)
       this.article = null
       this.saved = true

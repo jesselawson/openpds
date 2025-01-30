@@ -54,7 +54,7 @@ export const useSyncStore = defineStore('sync', {
       }
     },
 
-    async syncArticles(articles: Article[], pdsClient: PDSClient) {
+    async syncArticles(articles: Article[]) {
       console.log('Syncing articles:', articles)
       this.syncing = true
       this.progress = 0
@@ -90,6 +90,8 @@ export const useSyncStore = defineStore('sync', {
       }
     },
 
+    /// Given the ID of an article synced to Local DB, tries to sync the 
+    /// article with the PDS version. 
     async syncArticle(articleId: string): Promise<void> {
       if(!this.resolveConflict) return
 
@@ -174,6 +176,8 @@ export const useSyncStore = defineStore('sync', {
       this.resolveConflict = undefined
     },
 
+    /// Creates an article in the Local DB, then calls this.syncArticle
+    /// to sync with PDS
     async publishArticle(article: Article): Promise<void> {
       if (!article.published) {
         const db = new ArticleDB()
@@ -185,6 +189,37 @@ export const useSyncStore = defineStore('sync', {
       }
 
       await this.syncArticle(article.id)
+    },
+
+    async deleteArticle(id: string): Promise<void> {
+      this.syncing = true
+      const auth = useAuthStore()
+      
+      try {
+        const db = new ArticleDB()
+        const article = await db.get(id)
+        if (!article) throw new Error('Article not found')
+    
+        // If published, delete from PDS first.
+        // @todo This relies on the `published` boolean -- is that safe?
+        if (article.published && article.postUri) {
+          if (!auth.session?.accessJwt) throw new Error('Not authenticated')
+          
+          const pds = new PDSClient()
+          pds.setAuth(auth.session.accessJwt)
+          
+          await pds.deleteArticle(article)
+        }
+    
+        // Then delete locally
+        await db.delete(id)
+    
+      } catch (err) {
+        this.error = err as Error
+        throw err
+      } finally {
+        this.syncing = false
+      }
     }
   }
 })
