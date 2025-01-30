@@ -103,21 +103,13 @@ const createArticle = () => router.push({ name: 'editor' })
                   minute: '2-digit',
                   timeZone: 'America/Los_Angeles',
                   timeZoneName: 'short'
-                }).format(article.lastModified) }}
+                }).format(article.lastModified ) }}
           </span>
         </td>
         <td>
           <span></span>
           <span v-if="article.publishedAt && article.published">
-            {{ new Intl.DateTimeFormat('en-US', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                timeZone: 'America/Los_Angeles',
-                timeZoneName: 'short'
-              }).format(article.publishedAt) }}
+            {{ article.publishedAt }}
           </span>
         </td>
       </tr>

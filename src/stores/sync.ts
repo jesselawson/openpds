@@ -32,16 +32,16 @@ export const useSyncStore = defineStore('sync', {
     async checkSync(pdsClient: PDSClient) {
       this.syncing = true
       const auth = useAuthStore()
-      
+
       try {
         const remoteArticles = await pdsClient.listArticles(auth.session.did)
         const db = new ArticleDB()
         const localArticles = await db.list()
-        
-        const diff = remoteArticles.filter(remote => 
+
+        const diff = remoteArticles.filter(remote =>
           !localArticles.find(local => local.id === remote.id)
         )
-        
+
         this.pendingArticles = diff.length
         return diff
       } catch (err) {
@@ -57,23 +57,24 @@ export const useSyncStore = defineStore('sync', {
       this.syncing = true
       this.progress = 0
       const total = articles.length
-      
+
       try {
         const db = new ArticleDB()
         for (const [index, article] of articles.entries()) {
+          const pubDate = new Date(article.publishedAt as Date);
+          type status = "SYNCED" | "LOCAL" | "SYNCING" | "ERROR";
           const localArticle = {
             ...article,
-            id: article.id, // Fal
-            syncStatus: 'SYNCED',
+            id: article.id,
+            publishedAt: pubDate,
+            syncStatus: "SYNCED" as status,
             revision: 1,
             mediaRefs: article.mediaRefs || [],
             published: true
           }
 
-          await db.create({
-            ...article,
-            syncStatus: 'SYNCED'
-          })
+          await db.create(localArticle)
+
           this.progress = Math.round(((index + 1) / total) * 100)
         }
         this.pendingArticles = 0
@@ -91,16 +92,16 @@ export const useSyncStore = defineStore('sync', {
       this.syncing = true
       this.error = null
       const auth = useAuthStore()
-      
+
       try {
         if (!auth.session?.accessJwt) throw new Error('Not authenticated')
         const db = new ArticleDB()
         const article = await db.get(articleId)
         if (!article) throw new Error('Article not found')
-    
+
         const pds = new PDSClient()
         pds.setAuth(auth.session.accessJwt)
-        
+
         const result = await pds.syncArticle(article, {
           onConflict: async (local, remote) => {
             return new Promise<boolean | null>((resolve) => {
@@ -117,7 +118,7 @@ export const useSyncStore = defineStore('sync', {
         if(result.status ==='CANCELLED') {
           return
         }
-    
+
         if (result.status === 'ERROR') {
           await db.update(articleId, { syncStatus: 'ERROR' })
           throw result.error
@@ -131,7 +132,7 @@ export const useSyncStore = defineStore('sync', {
             publishedAt: now
           })
         }
-    
+
       } catch (err) {
         this.error = err as Error
         throw err
@@ -142,7 +143,7 @@ export const useSyncStore = defineStore('sync', {
 
     async resolveConflict(articleId: string, choice: 'remote' | 'local' | 'cancel'): Promise<void> {
       if (!this.resolveConflict) return
-      
+
       if (choice === 'cancel') {
         this.resolveConflict(null)
         // Just cleanup, don't resolve
@@ -150,7 +151,7 @@ export const useSyncStore = defineStore('sync', {
         this.conflictData = { local: null, remote: null }
         return
       }
-        
+
       const useRemote = choice === 'remote'
       if (useRemote) {
         const db = new ArticleDB()
@@ -158,7 +159,7 @@ export const useSyncStore = defineStore('sync', {
         if (article?.publishedAt) {
           await db.update(articleId, {
             lastModified: article.publishedAt,
-            syncStatus: 'SYNCED' 
+            syncStatus: 'SYNCED'
           })
         }
       }
@@ -178,7 +179,7 @@ export const useSyncStore = defineStore('sync', {
           syncStatus: 'SYNCING'
         })
       }
-      
+
       await this.syncArticle(article.id)
     }
   }

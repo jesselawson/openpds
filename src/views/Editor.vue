@@ -21,7 +21,7 @@ let saveTimeout: number | undefined
 const deleteArticle = async () => {
   if (!editor.article) return
   if (!confirm('Delete this article?')) return
-  
+
   try {
     await editor.deleteArticle(editor.article.id)
     router.push({ name: 'home' })
@@ -40,7 +40,7 @@ const debouncedSave = () => {
         editor.article.content = content.value
         await editor.saveArticle()
       }
-    }    
+    }
   }, 1000)
 }
 
@@ -64,10 +64,10 @@ const publish = async () => {
   try {
     await editor.publishArticle()
   } catch (err) {
-    // If there's no postUri, then make sure published == false, 
+    // If there's no postUri, then make sure published == false,
     // otherwise the UI messages get confusing:
     if (!editor.article.postUri) {
-      editor.article.published = false 
+      editor.article.published = false
     }
     console.error('Failed to publish:', err)
   }
@@ -171,14 +171,14 @@ onMounted(async () => {
         </tr>
       <tr>
         <td colspan="2">
-          <button 
+          <button
           @click="publish"
           :disabled="!editor?.saved || sync.syncing"
         >
           {{ sync.syncing ? 'Sync in progress...' : 'Publish (Sync with PDS)' }}
         </button>
 
-        <button 
+        <button
           @click="deleteArticle"
           style="float:right; background-color:black"
         >
