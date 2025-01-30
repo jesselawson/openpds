@@ -17,13 +17,13 @@ export class ArticleDB {
    * Creates a new article in IndexedDB
    * Validates required fields and sets defaults
    */
-  async create(article: Omit<Article, 'revision' | 'lastModified'>): Promise<void> {
+  async create(article: Omit<Article, 'revision'>): Promise<void> {
     const db = await getDB()
     const tx = db.transaction('articles', 'readwrite')
     await tx.store.add({
       ...article,
       revision: 1,
-      syncStatus: 'LOCAL', 
+      syncStatus: 'LOCAL',
       lastModified: new Date()
     })
     await tx.done
@@ -47,12 +47,12 @@ export class ArticleDB {
   async update(id: string, updates: Partial<Article>): Promise<void> {
     const db = await getDB()
     const tx = db.transaction('articles', 'readwrite')
-    
+
     const article = await tx.store.get(id)
     if (!article) {
       throw new Error(`Article ${id} not found`)
     }
-    
+
     if (updates.lastModified && article.lastModified > updates.lastModified) {
       throw new Error('Conflict: Article was modified')
     }
@@ -63,7 +63,7 @@ export class ArticleDB {
       revision: article.revision + 1,
       lastModified: new Date()
     }
-  
+
     await tx.store.put(updatedArticle)
     await tx.done
   }
@@ -72,7 +72,7 @@ export class ArticleDB {
    * Deletes an article by ID
    * No-op if article doesn't exist
    */
-  
+
 async delete(id: string): Promise<void> {
   const db = await getDB()
   const tx = db.transaction('articles', 'readwrite')
@@ -87,23 +87,23 @@ async delete(id: string): Promise<void> {
   async list(opts: ListOpts = {}): Promise<Article[]> {
     const db = await getDB()
     const tx = db.transaction('articles', 'readonly')
-    
+
     let cursor: IDBPCursorWithValue<OpenPDSDB, ["articles"], "articles", any, "readonly"> | null
-  
+
     if (opts.syncStatus) {
       cursor = await tx.store.index('by-status').openCursor(opts.syncStatus)
     } else if (opts.orderBy === 'lastModified') {
-      cursor = await tx.store.index('by-modified').openCursor(undefined, 
+      cursor = await tx.store.index('by-modified').openCursor(undefined,
         opts.order === 'desc' ? 'prev' : 'next')
     } else {
       cursor = await tx.store.openCursor()
     }
-  
+
     const articles: Article[] = []
     let skipped = 0
     const offset = opts.offset || 0
     const limit = opts.limit || Infinity
-  
+
     while (cursor && articles.length < limit) {
       if (skipped < offset) {
         skipped++
@@ -113,7 +113,7 @@ async delete(id: string): Promise<void> {
       articles.push(cursor.value)
       cursor = await cursor.continue()
     }
-  
+
     await tx.done
     return articles
   }
@@ -125,24 +125,24 @@ async delete(id: string): Promise<void> {
   async bulkUpdate(updates: { id: string, article: Partial<Article> }[]): Promise<void> {
     const db = await getDB()
     const tx = db.transaction('articles', 'readwrite')
-  
+
     // Sequential updates to avoid transaction timeout
     for (const { id, article } of updates) {
       const existing = await tx.store.get(id)
       if (!existing) {
         throw new Error(`Article ${id} not found`)
       }
-  
+
       const updated: Article = {
         ...existing,
         ...article,
         revision: existing.revision + 1,
         lastModified: new Date()
       }
-  
+
       await tx.store.put(updated)
     }
-  
+
     await tx.done
   }
 

@@ -35,7 +35,9 @@ export const useSyncStore = defineStore('sync', {
 
       try {
         const remoteArticles = await pdsClient.listArticles(auth.session.did)
+
         const db = new ArticleDB()
+
         const localArticles = await db.list()
 
         const diff = remoteArticles.filter(remote =>
@@ -53,7 +55,7 @@ export const useSyncStore = defineStore('sync', {
     },
 
     async syncArticles(articles: Article[], pdsClient: PDSClient) {
-      console.log('Syncing articles:', articles) // Add this
+      console.log('Syncing articles:', articles)
       this.syncing = true
       this.progress = 0
       const total = articles.length
@@ -61,12 +63,14 @@ export const useSyncStore = defineStore('sync', {
       try {
         const db = new ArticleDB()
         for (const [index, article] of articles.entries()) {
-          const pubDate = new Date(article.publishedAt as Date);
+          const pubDate = article.publishedAt ? article.publishedAt : new Date();
+
           type status = "SYNCED" | "LOCAL" | "SYNCING" | "ERROR";
           const localArticle = {
             ...article,
             id: article.id,
             publishedAt: pubDate,
+            lastModified: pubDate,
             syncStatus: "SYNCED" as status,
             revision: 1,
             mediaRefs: article.mediaRefs || [],
