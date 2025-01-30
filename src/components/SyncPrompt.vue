@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useSyncStore } from '@/stores/sync'
 import { PDSClient } from '@/lib/pds'
 import { useAuthStore } from '@/stores/auth'
@@ -8,6 +8,19 @@ const auth = useAuthStore()
 const sync = useSyncStore()
 const pdsClient = new PDSClient()
 const showPrompt = ref(false)
+
+// Add to script setup
+onMounted(() => {
+  if (auth.session) {
+    checkForUpdates()
+  }
+})
+
+watch(() => auth.session, (newSession) => {
+  if (newSession) {
+    checkForUpdates() 
+  }
+})
 
 const checkForUpdates = async () => {
   if (!auth.session) return
@@ -35,23 +48,26 @@ const dismiss = () => {
 </script>
 
 <template>
-  <div v-if="showPrompt" class="fixed bottom-4 right-4 p-4 bg-white rounded-lg shadow-lg">
-    <div class="flex items-center gap-4">
-      <div>
-        <p class="font-medium">
-          Welcome back! Your PDS contains {{ sync.pendingArticles }} articles that aren't on this device.
-        </p>
-        <div v-if="sync.syncing" class="mt-2">
-          <div class="h-2 bg-gray-200 rounded">
-            <div 
-              class="h-full bg-blue-500 rounded" 
-              :style="{ width: sync.progress + '%' }"
-            />
-          </div>
-        </div>
-      </div>
-      
-      <div class="flex gap-2">
+  <table v-if="showPrompt"
+  :style="{'border-color': '#f4b8e4'}"
+  >
+  <tbody>
+    <tr>
+      <td colspan="2" v-if="!sync.syncing">
+        Welcome back! Your PDS contains {{ sync.pendingArticles }} articles that aren't on this device.
+      </td>
+      <td colspan="2" v-else>
+        Syncing your local DB with yoru PDS... {{ sync.progress }}%...
+      </td>
+    </tr>
+    <tr v-if="sync.error">
+      <td>
+        {{ sync.error.message }}
+      </td>
+    </tr>
+    <tr>
+      <th>OPTIONS</th>
+      <td>
         <button
           @click="handleSync"
           :disabled="sync.syncing"
@@ -59,6 +75,7 @@ const dismiss = () => {
         >
           Sync Now
         </button>
+        &nbsp;
         <button
           @click="dismiss"
           :disabled="sync.syncing" 
@@ -66,11 +83,8 @@ const dismiss = () => {
         >
           Dismiss
         </button>
-      </div>
-    </div>
-    
-    <p v-if="sync.error" class="mt-2 text-red-500 text-sm">
-      {{ sync.error.message }}
-    </p>
-  </div>
+      </td>
+    </tr>
+  </tbody>
+  </table>
 </template>

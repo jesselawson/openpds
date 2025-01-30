@@ -65,7 +65,7 @@ const contentDiff = computed(() => diff.diffLines(props.remote.text, props.local
         </div>
 
         <div class="grid vertical-middle">
-            <button @click="emit('resolve', 'cancel')">(CANCEL) &larr;</button>
+            <button @click="emit('update:modelValue', false); emit('resolve', 'cancel')">(CANCEL) &larr;</button>
             <div>
                 <p>Cancel publish operation and go back</p>
                 <p class="meta">This modal will close.</p>

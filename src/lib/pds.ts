@@ -5,7 +5,7 @@ import { ArticleDB } from '@/db/article'
 const ARTICLE_COLLECTION = 'org.openpds.article'
 
 export interface SyncResult {
-  status: 'SUCCESS' | 'CONFLICT' | 'ERROR'
+  status: 'SUCCESS' | 'CONFLICT' | 'ERROR' | 'CANCELLED'
   error?: Error
   remoteRevision?: number,
   useLocalVersion?: boolean
@@ -21,7 +21,7 @@ interface ArticleRecord {
 }
 
 interface SyncOptions {
-  onConflict?: (local: Article, remote: ArticleRecord) => Promise<boolean>
+  onConflict?: (local: Article, remote: ArticleRecord) => Promise<boolean | null>  // null = cancelled
 }
 
 export class PDSClient {
@@ -45,11 +45,11 @@ export class PDSClient {
       })
   
       return data.records.map(record => ({
-        id: record.rkey as string,
+        id: record.uri.split('/').pop(),
         title: record.value.title,
         content: record.value.text,
         published: true, // PDS only has published articles
-        publishedAt: new Date(record.value.publishedAt),
+        publishedAt: record.value.publishedAt,
         revision: 1, // PDS doesn't track revisions
         postUri: record.uri,
         syncStatus: 'SYNCED',
@@ -85,6 +85,10 @@ export class PDSClient {
         }
   
         const useRemote = await options.onConflict(article, remoteArticle)
+
+        if (useRemote === null) {
+          return { status: 'CANCELLED' }
+        }
 
         if(useRemote) {
           await this.db.update(article.id, {

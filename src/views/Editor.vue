@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watchEffect, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useEditorStore } from '@/stores/editor'
 import { useSyncStore } from '@/stores/sync'
@@ -26,7 +26,7 @@ const deleteArticle = async () => {
     await editor.deleteArticle(editor.article.id)
     router.push({ name: 'home' })
   } catch (err) {
-    console.error('Failed to delete:', err)
+    console.error('Failed to delete article:', err)
   }
 }
 
@@ -62,11 +62,10 @@ watch([title, content], () => {
 const publish = async () => {
   if (!editor.article) return
   try {
-    await sync.publishArticle(editor.article)
-    // Reload article to get updated state
-    await editor.loadArticle(editor.article.id)
-    editor.saved = true
+    await editor.publishArticle()
   } catch (err) {
+    // If there's no postUri, then make sure published == false, 
+    // otherwise the UI messages get confusing:
     if (!editor.article.postUri) {
       editor.article.published = false 
     }
@@ -188,11 +187,11 @@ onMounted(async () => {
         </td>
       </tr>
     </tbody>
-    <ConflictModal v-if="editor.conflictData.local && editor.conflictData.remote"
-  v-model="editor.showConflict"
-  :local="editor.conflictData.local"
-  :remote="editor.conflictData.remote"
-  @resolve="editor.resolveConflictChoice"
+    <ConflictModal v-if="sync.conflictData.local && sync.conflictData.remote"
+  v-model="sync.showConflict"
+  :local="sync.conflictData.local"
+  :remote="sync.conflictData.remote"
+  @resolve="(choice) => editor.article && sync.resolveConflict(editor.article.id, choice)"
 />
   </table>
 </template>

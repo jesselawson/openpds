@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { computed, onMounted, ref } from 'vue'
 import NamespaceSetup from '@/components/NamespaceSetup.vue'
+import SyncPrompt from '@/components/SyncPrompt.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -39,6 +40,7 @@ const handleSkip = () => {
     @skip="handleSkip"
   />
   <div v-else>
+    
   <table>  
     <tbody>
       <tr>
@@ -62,6 +64,8 @@ const handleSkip = () => {
   </tr>
   </tbody>
 </table>
+
+<SyncPrompt v-if="isAuthenticated" />
   
     <main class="flex-1">
       <router-view />
