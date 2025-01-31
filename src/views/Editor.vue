@@ -94,6 +94,7 @@ onMounted(async () => {
       content: '',
       published: false,
       mediaRefs: [],
+      lastModified: new Date(),
       authorDid: authSession.did
     })
   }

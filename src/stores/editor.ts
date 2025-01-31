@@ -1,10 +1,9 @@
 import { defineStore } from 'pinia'
 import { ArticleDB } from '@/db/article'
 import { toRaw } from 'vue'
-import type { EditorState, Article } from '@/types'
+import type { EditorState } from '@/types'
 import { useAuthStore } from './auth'
 import { useSyncStore } from './sync'
-import { PDSClient } from '@/lib/pds'
 
 export const useEditorStore = defineStore('editor', {
   state: (): EditorState => ({
@@ -50,7 +49,7 @@ export const useEditorStore = defineStore('editor', {
       const db = new ArticleDB()
       const sync = useSyncStore()
       await sync.deleteArticle(id);
-      
+
       await db.delete(id)
       this.article = null
       this.saved = true
@@ -65,6 +64,11 @@ export const useEditorStore = defineStore('editor', {
 
       const sync = useSyncStore()
       this.savingStatus = 'SAVING'
+
+      // Explicitly set anything that doesn't appear to be explicitly set.
+      // @todo Would it be more appropriate to have this somewhere else?
+      this.article.authorDid = auth.session.did;
+      this.article.publishedAt = this.article.lastModified;
       
       try {
         await sync.publishArticle(this.article)

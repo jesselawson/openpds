@@ -133,7 +133,7 @@ export class PDSClient {
 
   private async createArticle(article: Article): Promise<SyncResult> {
     try {
-      const now = new Date();
+      const now = new Date().toString();
       const result = await this.agent.com.atproto.repo.createRecord({
         collection: ARTICLE_COLLECTION,
         repo: article.authorDid,
@@ -149,7 +149,7 @@ export class PDSClient {
       await this.db.update(article.id, {
         syncStatus: 'SYNCED',
         postUri: result.data.uri,
-        publishedAt: now,
+        publishedAt: new Date(now),
       })
 
       return { status: 'SUCCESS', useLocalVersion: true }
