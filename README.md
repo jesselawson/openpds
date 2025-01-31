@@ -20,6 +20,7 @@ static site blog (Hugo, Zola, Jekyll, Eleventy, etc) or github pages style servi
 - [X] If local version is different from PDS version of article, presents
       sync conflict opportunity resolution 
 - [X] Delete local article deletes PDS article
+- [X] Offline editing/syncing with Local (browser) IDB 
 
 **Alpha bugs**
 - Check the issues for a list of outstanding todos
