@@ -5,6 +5,12 @@ through the Authenticated Transfer (AT) Protocol.
 
 Right now there is only _one_ tool, the Articles editor, and it's in development.
 
+## Markdown Article Editor
+
+The goal of the Article Editor is to create a public repository of markdown files 
+that I can use as a source of truth for a programmatically generated 
+static site blog (Hugo, Zola, Jekyll, Eleventy, etc) or github pages style service.
+
 **Alpha features**: 
 - [X] User authentication
 - [X] If user does not have `org.openpds.defs` in PDS, prompts on login
@@ -22,17 +28,6 @@ Right now there is only _one_ tool, the Articles editor, and it's in development
   new tools and functionality in the future. 
 * Unless you are interested in contributing to development, I don't recommend you use 
   this yet.
-
-## Stable
-* (none yet)
-
-## Open Alpha (expect some changes)
-
-### OpenPDS Articles Editor
-
-* **Goal**: Create a public repository of markdown files that I can 
-  use as a source of truth for a programmatically generated 
-  static site blog (Hugo, Zola, Jekyll, Eleventy, etc).
 
 ## Contributing
 
