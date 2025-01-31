@@ -1,6 +1,7 @@
 import { AtpAgent } from '@atproto/api'
 import type { Article } from '@/types'
 import { ArticleDB } from '@/db/article'
+import { useSyncStore } from '@/stores/sync'
 
 const ARTICLE_COLLECTION = 'org.openpds.article'
 
@@ -125,6 +126,8 @@ export class PDSClient {
     } catch (err) {
       if (err.error === 'RecordNotFound') {
         // Already deleted from PDS, can proceed with local delete
+        const sync = useSyncStore()
+        await sync.deleteArticle(article.id)
         return
       }
       throw err 
